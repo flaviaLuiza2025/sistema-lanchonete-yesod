@@ -1,0 +1,41 @@
+-- By default this file is used by `parseRoutesFile` in Foundation.hs
+-- Syntax for this file here: https://www.yesodweb.com/book/routing-and-handlers
+
+/static StaticR Static appStatic
+/auth   AuthR   Auth   getAuth
+
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
+
+/ HomeR GET POST
+
+/comments CommentR POST
+
+/profile ProfileR GET
+
+/categorias                       CategoriasR GET POST
+/categorias/#CategoriaId          CategoriaEditarR GET POST
+/categorias/#CategoriaId/excluir  CategoriaExcluirR POST
+
+/clientes                         ClientesR GET POST
+/clientes/#ClienteId              ClienteEditarR GET POST
+/clientes/#ClienteId/excluir      ClienteExcluirR POST
+
+/produtos                         ProdutosR GET POST
+/produtos/#ProdutoId              ProdutoEditarR GET POST
+/produtos/#ProdutoId/excluir      ProdutoExcluirR POST
+/entregadores                         EntregadoresR GET POST
+/entregadores/#EntregadorId           EntregadorEditarR GET POST
+/entregadores/#EntregadorId/excluir   EntregadorExcluirR POST
+
+/pedidos                              PedidosR GET POST
+/pedidos/#PedidoId                    PedidoEditarR GET POST
+/pedidos/#PedidoId/excluir            PedidoExcluirR POST
+
+/itens                                ItensR GET POST
+/itens/#ItemPedidoId                  ItemEditarR GET POST
+/itens/#ItemPedidoId/excluir          ItemExcluirR POST
+
+/avaliacoes                           AvaliacoesR GET POST
+/avaliacoes/#AvaliacaoId              AvaliacaoEditarR GET POST
+/avaliacoes/#AvaliacaoId/excluir      AvaliacaoExcluirR POST

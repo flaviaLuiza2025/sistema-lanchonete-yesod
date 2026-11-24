@@ -1,0 +1,43 @@
+<div .container>
+    <div .jumbotron>
+        <h1>Sistema de Gestão - Lanchonete
+        <p>Controle de cardápio, clientes, entregas e pedidos...
+
+    <div .row>
+        <div .col-md-4>
+            <h3>1. Categorias
+            <p>Categorias do cardápio (Lanches, Bebidas, Porções).
+            <a .btn .btn-primary href=@{CategoriasR}>Gerenciar Categorias
+
+        <div .col-md-4>
+            <h3>2. Produtos
+            <p>Itens do cardápio vinculados às categorias.
+            <a .btn .btn-primary href=@{ProdutosR}>Gerenciar Produtos
+
+        <div .col-md-4>
+            <h3>3. Clientes (API ViaCEP)
+            <p>Cadastro de clientes com preenchimento automático de endereço pelo CEP.
+            <a .btn .btn-primary href=@{ClientesR}>Gerenciar Clientes
+
+    <hr>
+
+    <div .row>
+        <div .col-md-3>
+            <h3>4. Entregadores
+            <p>Cadastro de motoboys e placas.
+            <a .btn .btn-success href=@{EntregadoresR}>Gerenciar Entregadores
+
+        <div .col-md-3>
+            <h3>5. Pedidos
+            <p>Abertura e status de pedidos dos clientes.
+            <a .btn .btn-success href=@{PedidosR}>Gerenciar Pedidos
+
+        <div .col-md-3>
+            <h3>6. Itens do Pedido
+            <p>Produtos e quantidades de cada pedido.
+            <a .btn .btn-success href=@{ItensR}>Gerenciar Itens
+
+        <div .col-md-3>
+            <h3>7. Avaliações
+            <p>Notas e comentários sobre os pedidos entregues.
+            <a .btn .btn-success href=@{AvaliacoesR}>Gerenciar Avaliações

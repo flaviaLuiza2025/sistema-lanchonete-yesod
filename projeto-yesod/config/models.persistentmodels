@@ -1,0 +1,61 @@
+-- By default this file is used by `persistFileWith` in Model.hs (which is imported by Foundation.hs)
+-- Syntax for this file here: https://github.com/yesodweb/persistent/blob/master/docs/Persistent-entity-syntax.md
+
+User
+    ident Text
+    password Text Maybe
+    UniqueUser ident
+    deriving Typeable
+Email
+    email Text
+    userId UserId Maybe
+    verkey Text Maybe
+    UniqueEmail email
+Comment json -- Adding "json" causes ToJSON and FromJSON instances to be derived.
+    message Text
+    userId UserId Maybe
+    deriving Eq
+    deriving Show
+
+Categoria
+    nome Text
+    descricao Text
+    deriving Show
+
+Produto
+    nome Text
+    preco Double
+    categoriaId CategoriaId
+    deriving Show
+
+Cliente
+    nome Text
+    telefone Text
+    cep Text
+    endereco Text
+    cidade Text
+    deriving Show
+
+Entregador
+    nome Text
+    placaMoto Text
+    deriving Show
+
+Pedido
+    clienteId ClienteId
+    entregadorId EntregadorId Maybe
+    status Text
+    observacao Text Maybe
+    deriving Show
+
+ItemPedido
+    pedidoId PedidoId
+    produtoId ProdutoId
+    quantidade Int
+    deriving Show
+
+Avaliacao
+    pedidoId PedidoId
+    nota Int
+    comentario Text
+    deriving Show
