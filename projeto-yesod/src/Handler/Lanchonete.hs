@@ -48,8 +48,7 @@ getCategoriasR = do
         setTitle "Categorias - Lanchonete"
         [whamlet|
             <h1>Gerenciar Categorias
-            <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{ClientesR}>Clientes</a> | <a href=@{ProdutosR}>Produtos</a>
-
+            <p><a h<p><a href=@{HomeR}>Início</a> | <a href=@{CategoriasR}>Categorias</a> | <a href=@{ProdutosR}>Produtos</a> | <a href=@{ClientesR}>Clientes</a> | <a href=@{EntregadoresR}>Entregadores</a> | <a href=@{PedidosR}>Pedidos</a> | <a href=@{ItensR}>Itens</a> | <a href=@{AvaliacoesR}>Avaliações</a>
             <h3>Nova Categoria
             <form method=post action=@{CategoriasR}>
                 Nome: <input type=text name=nome required>
