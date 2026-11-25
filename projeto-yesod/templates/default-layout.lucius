@@ -71,3 +71,53 @@
 #message {
     margin-bottom: 40px;
 }
+
+/* Tabelas dos CRUDs */
+.table {
+    margin-top: 15px;
+    margin-bottom: 40px;
+}
+
+.table > tbody > tr > th {
+    background-color: rgb(27, 28, 29);
+    color: white;
+}
+
+.table > tbody > tr > td {
+    vertical-align: middle;
+}
+
+/* Coluna "Ações": ocupa só o espaço dos botões */
+.table > tbody > tr > th:last-child,
+.table > tbody > tr > td:last-child {
+    width: 1%;
+    white-space: nowrap;
+}
+
+/* Formulários dos CRUDs */
+.form-crud {
+    padding: 15px;
+    margin-bottom: 25px;
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-crud input,
+.form-crud select {
+    height: 36px;
+    padding: 6px 10px;
+    margin: 4px 12px 4px 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+}
+
+/* Cartões do painel inicial */
+.cartao {
+    min-height: 190px;
+    padding: 5px 20px 20px 20px;
+    margin-bottom: 25px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}

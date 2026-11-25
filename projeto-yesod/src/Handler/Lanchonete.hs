@@ -23,7 +23,8 @@ instance FromJSON ViaCEPResponse
 
 buscarEnderecoPorCep :: Text -> IO (Text, Text)
 buscarEnderecoPorCep cepDigitado = do
-    let url = "GET https://viacep.com.br/ws/" ++ unpack cepDigitado ++ "/json/"
+    let cepLimpo = filter (/= '-') (unpack cepDigitado)
+        url = "GET https://viacep.com.br/ws/" ++ cepLimpo ++ "/json/"
     resultado <- try (do
         req <- parseRequest url
         res <- httpJSON req
@@ -48,15 +49,15 @@ getCategoriasR = do
         setTitle "Categorias - Lanchonete"
         [whamlet|
             <h1>Gerenciar Categorias
-            <p><a h<p><a href=@{HomeR}>Início</a> | <a href=@{CategoriasR}>Categorias</a> | <a href=@{ProdutosR}>Produtos</a> | <a href=@{ClientesR}>Clientes</a> | <a href=@{EntregadoresR}>Entregadores</a> | <a href=@{PedidosR}>Pedidos</a> | <a href=@{ItensR}>Itens</a> | <a href=@{AvaliacoesR}>Avaliações</a>
+            <p><a href=@{HomeR}>Início</a> | <a href=@{CategoriasR}>Categorias</a> | <a href=@{ProdutosR}>Produtos</a> | <a href=@{ClientesR}>Clientes</a> | <a href=@{EntregadoresR}>Entregadores</a> | <a href=@{PedidosR}>Pedidos</a> | <a href=@{ItensR}>Itens</a> | <a href=@{AvaliacoesR}>Avaliações</a>
             <h3>Nova Categoria
-            <form method=post action=@{CategoriasR}>
+            <form .form-crud method=post action=@{CategoriasR}>
                 Nome: <input type=text name=nome required>
                 Descrição: <input type=text name=descricao required>
-                <button type=submit>Cadastrar
+                <button .btn .btn-primary type=submit>Cadastrar
 
             <h3>Lista de Categorias
-            <table border=1 cellpadding=6>
+            <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>Nome
                     <th>Descrição
@@ -66,9 +67,9 @@ getCategoriasR = do
                         <td>#{categoriaNome cat}
                         <td>#{categoriaDescricao cat}
                         <td>
-                            <a href=@{CategoriaEditarR cid}>Editar
+                            <a .btn .btn-default .btn-xs href=@{CategoriaEditarR cid}>Editar
                             <form method=post action=@{CategoriaExcluirR cid} style="display:inline;">
-                                <button type=submit>Excluir
+                                <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
 postCategoriasR :: Handler Html
@@ -85,10 +86,10 @@ getCategoriaEditarR cid = do
         setTitle "Editar Categoria"
         [whamlet|
             <h1>Editar Categoria
-            <form method=post action=@{CategoriaEditarR cid}>
+            <form .form-crud method=post action=@{CategoriaEditarR cid}>
                 Nome: <input type=text name=nome value=#{categoriaNome cat} required>
                 Descrição: <input type=text name=descricao value=#{categoriaDescricao cat} required>
-                <button type=submit>Salvar Alterações
+                <button .btn .btn-primary type=submit>Salvar Alterações
             <p><a href=@{CategoriasR}>Cancelar
         |]
 
@@ -117,14 +118,14 @@ getClientesR = do
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{CategoriasR}>Categorias</a> | <a href=@{ProdutosR}>Produtos</a>
 
             <h3>Novo Cliente
-            <form method=post action=@{ClientesR}>
+            <form .form-crud method=post action=@{ClientesR}>
                 Nome: <input type=text name=nome required>
                 Telefone: <input type=text name=telefone required>
                 CEP (somente números, ex: 01001000): <input type=text name=cep required>
-                <button type=submit>Cadastrar e Buscar Endereço
+                <button .btn .btn-primary type=submit>Cadastrar e Buscar Endereço
 
             <h3>Clientes Cadastrados
-            <table border=1 cellpadding=6>
+            <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>Nome
                     <th>Telefone
@@ -140,9 +141,9 @@ getClientesR = do
                         <td>#{clienteEndereco cli}
                         <td>#{clienteCidade cli}
                         <td>
-                            <a href=@{ClienteEditarR clid}>Editar
+                            <a .btn .btn-default .btn-xs href=@{ClienteEditarR clid}>Editar
                             <form method=post action=@{ClienteExcluirR clid} style="display:inline;">
-                                <button type=submit>Excluir
+                                <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
 postClientesR :: Handler Html
@@ -161,13 +162,13 @@ getClienteEditarR clid = do
         setTitle "Editar Cliente"
         [whamlet|
             <h1>Editar Cliente
-            <form method=post action=@{ClienteEditarR clid}>
+            <form .form-crud method=post action=@{ClienteEditarR clid}>
                 Nome: <input type=text name=nome value=#{clienteNome cli} required>
                 Telefone: <input type=text name=telefone value=#{clienteTelefone cli} required>
                 CEP: <input type=text name=cep value=#{clienteCep cli} required>
                 Endereço: <input type=text name=endereco value=#{clienteEndereco cli} required>
                 Cidade: <input type=text name=cidade value=#{clienteCidade cli} required>
-                <button type=submit>Salvar
+                <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{ClientesR}>Cancelar
         |]
 
@@ -200,17 +201,17 @@ getProdutosR = do
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{CategoriasR}>Categorias</a> | <a href=@{ClientesR}>Clientes</a>
 
             <h3>Novo Produto
-            <form method=post action=@{ProdutosR}>
+            <form .form-crud method=post action=@{ProdutosR}>
                 Nome: <input type=text name=nome required>
                 Preço (ex: 25.50): <input type=number step=0.01 name=preco required>
                 Categoria:
                 <select name=categoriaId required>
                     $forall Entity cid cat <- categorias
                         <option value=#{fromSqlKey cid}>#{categoriaNome cat}
-                <button type=submit>Cadastrar Produto
+                <button .btn .btn-primary type=submit>Cadastrar Produto
 
             <h3>Produtos Cadastrados
-            <table border=1 cellpadding=6>
+            <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>Nome
                     <th>Preço
@@ -222,9 +223,9 @@ getProdutosR = do
                         <td>R$ #{produtoPreco prod}
                         <td>#{fromSqlKey (produtoCategoriaId prod)}
                         <td>
-                            <a href=@{ProdutoEditarR pid}>Editar
+                            <a .btn .btn-default .btn-xs href=@{ProdutoEditarR pid}>Editar
                             <form method=post action=@{ProdutoExcluirR pid} style="display:inline;">
-                                <button type=submit>Excluir
+                                <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
 postProdutosR :: Handler Html
@@ -242,10 +243,10 @@ getProdutoEditarR pid = do
         setTitle "Editar Produto"
         [whamlet|
             <h1>Editar Produto
-            <form method=post action=@{ProdutoEditarR pid}>
+            <form .form-crud method=post action=@{ProdutoEditarR pid}>
                 Nome: <input type=text name=nome value=#{produtoNome prod} required>
                 Preço: <input type=number step=0.01 name=preco value=#{produtoPreco prod} required>
-                <button type=submit>Salvar
+                <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{ProdutosR}>Cancelar
         |]
 
@@ -274,13 +275,13 @@ getEntregadoresR = do
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{PedidosR}>Pedidos</a>
 
             <h3>Novo Entregador
-            <form method=post action=@{EntregadoresR}>
+            <form .form-crud method=post action=@{EntregadoresR}>
                 Nome: <input type=text name=nome required>
                 Placa da Moto: <input type=text name=placa required>
-                <button type=submit>Cadastrar
+                <button .btn .btn-primary type=submit>Cadastrar
 
             <h3>Entregadores Cadastrados
-            <table border=1 cellpadding=6>
+            <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>Nome
                     <th>Placa da Moto
@@ -290,9 +291,9 @@ getEntregadoresR = do
                         <td>#{entregadorNome ent}
                         <td>#{entregadorPlacaMoto ent}
                         <td>
-                            <a href=@{EntregadorEditarR eid}>Editar
+                            <a .btn .btn-default .btn-xs href=@{EntregadorEditarR eid}>Editar
                             <form method=post action=@{EntregadorExcluirR eid} style="display:inline;">
-                                <button type=submit>Excluir
+                                <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
 postEntregadoresR :: Handler Html
@@ -309,10 +310,10 @@ getEntregadorEditarR eid = do
         setTitle "Editar Entregador"
         [whamlet|
             <h1>Editar Entregador
-            <form method=post action=@{EntregadorEditarR eid}>
+            <form .form-crud method=post action=@{EntregadorEditarR eid}>
                 Nome: <input type=text name=nome value=#{entregadorNome ent} required>
                 Placa da Moto: <input type=text name=placa value=#{entregadorPlacaMoto ent} required>
-                <button type=submit>Salvar
+                <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{EntregadoresR}>Cancelar
         |]
 
@@ -343,7 +344,7 @@ getPedidosR = do
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{ItensR}>Itens do Pedido</a> | <a href=@{AvaliacoesR}>Avaliações</a>
 
             <h3>Novo Pedido
-            <form method=post action=@{PedidosR}>
+            <form .form-crud method=post action=@{PedidosR}>
                 Cliente:
                 <select name=clienteId required>
                     $forall Entity clid cli <- clientes
@@ -359,10 +360,10 @@ getPedidosR = do
                     <option value="Saiu para Entrega">Saiu para Entrega
                     <option value="Entregue">Entregue
                 Observação: <input type=text name=observacao>
-                <button type=submit>Abrir Pedido
+                <button .btn .btn-primary type=submit>Abrir Pedido
 
             <h3>Pedidos Registrados
-            <table border=1 cellpadding=6>
+            <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>ID Pedido
                     <th>ID Cliente
@@ -382,9 +383,9 @@ getPedidosR = do
                         <td>#{pedidoStatus ped}
                         <td>#{fromMaybe "-" (pedidoObservacao ped)}
                         <td>
-                            <a href=@{PedidoEditarR pid}>Editar Status
+                            <a .btn .btn-default .btn-xs href=@{PedidoEditarR pid}>Editar Status
                             <form method=post action=@{PedidoExcluirR pid} style="display:inline;">
-                                <button type=submit>Excluir
+                                <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
 postPedidosR :: Handler Html
@@ -404,14 +405,14 @@ getPedidoEditarR pid = do
         setTitle "Editar Pedido"
         [whamlet|
             <h1>Atualizar Status do Pedido ##{fromSqlKey pid}
-            <form method=post action=@{PedidoEditarR pid}>
+            <form .form-crud method=post action=@{PedidoEditarR pid}>
                 Status:
                 <select name=status required>
                     <option value="Em Preparo">Em Preparo
                     <option value="Saiu para Entrega">Saiu para Entrega
                     <option value="Entregue">Entregue
                 Observação: <input type=text name=observacao value=#{fromMaybe "" (pedidoObservacao ped)}>
-                <button type=submit>Salvar
+                <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{PedidosR}>Cancelar
         |]
 
@@ -442,7 +443,7 @@ getItensR = do
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{PedidosR}>Pedidos</a> | <a href=@{ProdutosR}>Produtos</a>
 
             <h3>Adicionar Item a um Pedido
-            <form method=post action=@{ItensR}>
+            <form .form-crud method=post action=@{ItensR}>
                 Pedido:
                 <select name=pedidoId required>
                     $forall Entity pid ped <- pedidos
@@ -452,10 +453,10 @@ getItensR = do
                     $forall Entity prid prod <- produtos
                         <option value=#{fromSqlKey prid}>#{produtoNome prod} - R$ #{produtoPreco prod}
                 Quantidade: <input type=number name=quantidade value="1" min="1" required>
-                <button type=submit>Adicionar Item
+                <button .btn .btn-primary type=submit>Adicionar Item
 
             <h3>Itens Lançados
-            <table border=1 cellpadding=6>
+            <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>ID Pedido
                     <th>ID Produto
@@ -467,9 +468,9 @@ getItensR = do
                         <td>#{fromSqlKey (itemPedidoProdutoId item)}
                         <td>#{itemPedidoQuantidade item}
                         <td>
-                            <a href=@{ItemEditarR iid}>Editar Qtd
+                            <a .btn .btn-default .btn-xs href=@{ItemEditarR iid}>Editar Qtd
                             <form method=post action=@{ItemExcluirR iid} style="display:inline;">
-                                <button type=submit>Excluir
+                                <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
 postItensR :: Handler Html
@@ -487,9 +488,9 @@ getItemEditarR iid = do
         setTitle "Editar Item"
         [whamlet|
             <h1>Editar Quantidade do Item
-            <form method=post action=@{ItemEditarR iid}>
+            <form .form-crud method=post action=@{ItemEditarR iid}>
                 Quantidade: <input type=number name=quantidade value=#{itemPedidoQuantidade item} min="1" required>
-                <button type=submit>Salvar
+                <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{ItensR}>Cancelar
         |]
 
@@ -518,17 +519,17 @@ getAvaliacoesR = do
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{PedidosR}>Pedidos</a>
 
             <h3>Registrar Avaliação
-            <form method=post action=@{AvaliacoesR}>
+            <form .form-crud method=post action=@{AvaliacoesR}>
                 Pedido:
                 <select name=pedidoId required>
                     $forall Entity pid ped <- pedidos
                         <option value=#{fromSqlKey pid}>Pedido ##{fromSqlKey pid} (#{pedidoStatus ped})
                 Nota (1 a 5): <input type=number name=nota value="5" min="1" max="5" required>
                 Comentário: <input type=text name=comentario required>
-                <button type=submit>Enviar Avaliação
+                <button .btn .btn-primary type=submit>Enviar Avaliação
 
             <h3>Avaliações Recebidas
-            <table border=1 cellpadding=6>
+            <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>Pedido
                     <th>Nota
@@ -540,9 +541,9 @@ getAvaliacoesR = do
                         <td>#{avaliacaoNota av} / 5
                         <td>#{avaliacaoComentario av}
                         <td>
-                            <a href=@{AvaliacaoEditarR aid}>Editar
+                            <a .btn .btn-default .btn-xs href=@{AvaliacaoEditarR aid}>Editar
                             <form method=post action=@{AvaliacaoExcluirR aid} style="display:inline;">
-                                <button type=submit>Excluir
+                                <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
 postAvaliacoesR :: Handler Html
@@ -560,10 +561,10 @@ getAvaliacaoEditarR aid = do
         setTitle "Editar Avaliação"
         [whamlet|
             <h1>Editar Avaliação
-            <form method=post action=@{AvaliacaoEditarR aid}>
+            <form .form-crud method=post action=@{AvaliacaoEditarR aid}>
                 Nota (1 a 5): <input type=number name=nota value=#{avaliacaoNota av} min="1" max="5" required>
                 Comentário: <input type=text name=comentario value=#{avaliacaoComentario av} required>
-                <button type=submit>Salvar
+                <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{AvaliacoesR}>Cancelar
         |]
 
