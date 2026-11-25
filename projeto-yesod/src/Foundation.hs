@@ -112,24 +112,44 @@ instance Yesod App where
         -- Define the menu items of the header.
         let menuItems =
                 [ NavbarLeft $ MenuItem
-                    { menuItemLabel = "Home"
+                    { menuItemLabel = "Início"
                     , menuItemRoute = HomeR
                     , menuItemAccessCallback = True
                     }
                 , NavbarLeft $ MenuItem
-                    { menuItemLabel = "Profile"
-                    , menuItemRoute = ProfileR
-                    , menuItemAccessCallback = isJust muser
+                    { menuItemLabel = "Categorias"
+                    , menuItemRoute = CategoriasR
+                    , menuItemAccessCallback = True
                     }
-                , NavbarRight $ MenuItem
-                    { menuItemLabel = "Login"
-                    , menuItemRoute = AuthR LoginR
-                    , menuItemAccessCallback = isNothing muser
+                , NavbarLeft $ MenuItem
+                    { menuItemLabel = "Produtos"
+                    , menuItemRoute = ProdutosR
+                    , menuItemAccessCallback = True
                     }
-                , NavbarRight $ MenuItem
-                    { menuItemLabel = "Logout"
-                    , menuItemRoute = AuthR LogoutR
-                    , menuItemAccessCallback = isJust muser
+                , NavbarLeft $ MenuItem
+                    { menuItemLabel = "Clientes"
+                    , menuItemRoute = ClientesR
+                    , menuItemAccessCallback = True
+                    }
+                , NavbarLeft $ MenuItem
+                    { menuItemLabel = "Entregadores"
+                    , menuItemRoute = EntregadoresR
+                    , menuItemAccessCallback = True
+                    }
+                , NavbarLeft $ MenuItem
+                    { menuItemLabel = "Pedidos"
+                    , menuItemRoute = PedidosR
+                    , menuItemAccessCallback = True
+                    }
+                , NavbarLeft $ MenuItem
+                    { menuItemLabel = "Itens"
+                    , menuItemRoute = ItensR
+                    , menuItemAccessCallback = True
+                    }
+                , NavbarLeft $ MenuItem
+                    { menuItemLabel = "Avaliações"
+                    , menuItemRoute = AvaliacoesR
+                    , menuItemAccessCallback = True
                     }
                 ]
 
