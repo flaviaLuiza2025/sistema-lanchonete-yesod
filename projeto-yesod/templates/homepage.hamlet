@@ -1,50 +1,64 @@
-<div .container>
-    <div .jumbotron>
-        <h1>Sistema de Gestão da Lanchonete
-        <p>Gerencie o cardápio, os clientes, as entregas e os pedidos em um só lugar.
+<div .container style="margin-top: 20px;">
+    <div .jumbotron style="background-color: #fff3e0; border-left: 6px solid #e65100; padding: 30px; border-radius: 8px;">
+        <h1 style="color: #bf360c; margin-top: 0;">🍔 Sistema de Gestão - Lanchonete
+        <p style="font-size: 18px; color: #5d4037;">Controle completo de cardápio, clientes, entregas, pedidos e avaliações.
 
-    <h2>Cadastros
+    <h3 style="color: #424242; border-bottom: 2px solid #eee; padding-bottom: 8px;">Cardápio e Clientes
     <div .row>
-        <div .col-md-3 .col-sm-6>
-            <div .cartao>
-                <h3>Categorias
-                <p>Organize o cardápio em grupos, como lanches, bebidas e porções.
-                <a .btn .btn-primary href=@{CategoriasR}>Ver categorias
+        <div .col-md-4>
+            <div .panel .panel-warning>
+                <div .panel-heading>
+                    <h4 .panel-title><strong>1. Categorias</strong>
+                <div .panel-body>
+                    <p>Organize os grupos do cardápio (Lanches, Bebidas, Porções).
+                    <a .btn .btn-warning .btn-block href=@{CategoriasR}>Acessar Categorias
 
-        <div .col-md-3 .col-sm-6>
-            <div .cartao>
-                <h3>Produtos
-                <p>Cadastre os itens do cardápio com preço e categoria.
-                <a .btn .btn-primary href=@{ProdutosR}>Ver produtos
+        <div .col-md-4>
+            <div .panel .panel-warning>
+                <div .panel-heading>
+                    <h4 .panel-title><strong>2. Produtos</strong>
+                <div .panel-body>
+                    <p>Cadastre preços e vincule itens às categorias.
+                    <a .btn .btn-warning .btn-block href=@{ProdutosR}>Acessar Produtos
 
-        <div .col-md-3 .col-sm-6>
-            <div .cartao>
-                <h3>Clientes
-                <p>Cadastre clientes com endereço preenchido pelo CEP (ViaCEP).
-                <a .btn .btn-primary href=@{ClientesR}>Ver clientes
+        <div .col-md-4>
+            <div .panel .panel-info>
+                <div .panel-heading>
+                    <h4 .panel-title><strong>3. Clientes (ViaCEP)</strong>
+                <div .panel-body>
+                    <p>Cadastro com busca automática de rua e cidade pelo CEP.
+                    <a .btn .btn-info .btn-block href=@{ClientesR}>Acessar Clientes
 
-        <div .col-md-3 .col-sm-6>
-            <div .cartao>
-                <h3>Entregadores
-                <p>Cadastre os entregadores e as placas das motos.
-                <a .btn .btn-primary href=@{EntregadoresR}>Ver entregadores
-
-    <h2>Atendimento
+    <h3 style="color: #424242; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 25px;">Operação e Entregas
     <div .row>
-        <div .col-md-4 .col-sm-6>
-            <div .cartao>
-                <h3>Pedidos
-                <p>Abra pedidos e acompanhe o status até a entrega.
-                <a .btn .btn-success href=@{PedidosR}>Ver pedidos
+        <div .col-md-3>
+            <div .panel .panel-success>
+                <div .panel-heading>
+                    <h4 .panel-title><strong>4. Entregadores</strong>
+                <div .panel-body>
+                    <p>Cadastro de motoboys e placas.
+                    <a .btn .btn-success .btn-block href=@{EntregadoresR}>Entregadores
 
-        <div .col-md-4 .col-sm-6>
-            <div .cartao>
-                <h3>Itens do Pedido
-                <p>Informe os produtos e as quantidades de cada pedido.
-                <a .btn .btn-success href=@{ItensR}>Ver itens
+        <div .col-md-3>
+            <div .panel .panel-success>
+                <div .panel-heading>
+                    <h4 .panel-title><strong>5. Pedidos</strong>
+                <div .panel-body>
+                    <p>Abertura e status das entregas.
+                    <a .btn .btn-success .btn-block href=@{PedidosR}>Pedidos
 
-        <div .col-md-4 .col-sm-6>
-            <div .cartao>
-                <h3>Avaliações
-                <p>Registre as notas e os comentários dos clientes sobre os pedidos.
-                <a .btn .btn-success href=@{AvaliacoesR}>Ver avaliações
+        <div .col-md-3>
+            <div .panel .panel-success>
+                <div .panel-heading>
+                    <h4 .panel-title><strong>6. Itens do Pedido</strong>
+                <div .panel-body>
+                    <p>Lançamento de produtos e quantidades.
+                    <a .btn .btn-success .btn-block href=@{ItensR}>Itens
+
+        <div .col-md-3>
+            <div .panel .panel-success>
+                <div .panel-heading>
+                    <h4 .panel-title><strong>7. Avaliações</strong>
+                <div .panel-body>
+                    <p>Notas e feedback dos clientes.
+                    <a .btn .btn-success .btn-block href=@{AvaliacoesR}>Avaliações
