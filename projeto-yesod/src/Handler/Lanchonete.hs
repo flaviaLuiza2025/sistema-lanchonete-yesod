@@ -121,7 +121,8 @@ getClientesR = do
             <form .form-crud method=post action=@{ClientesR}>
                 Nome: <input type=text name=nome required>
                 Telefone: <input type=text name=telefone required>
-                CEP (somente números, ex: 01001000): <input type=text name=cep required>
+                CEP (com ou sem hífen, ex: 01001-000): <input type=text name=cep required>
+                Número/Complemento (opcional): <input type=text name=complemento>
                 <button .btn .btn-primary type=submit>Cadastrar e Buscar Endereço
 
             <h3>Clientes Cadastrados
@@ -131,6 +132,7 @@ getClientesR = do
                     <th>Telefone
                     <th>CEP
                     <th>Endereço (ViaCEP)
+                    <th>Número/Complemento
                     <th>Cidade (ViaCEP)
                     <th>Ações
                 $forall Entity clid cli <- clientes
@@ -139,6 +141,7 @@ getClientesR = do
                         <td>#{clienteTelefone cli}
                         <td>#{clienteCep cli}
                         <td>#{clienteEndereco cli}
+                        <td>#{fromMaybe "-" (clienteComplemento cli)}
                         <td>#{clienteCidade cli}
                         <td>
                             <a .btn .btn-default .btn-xs href=@{ClienteEditarR clid}>Editar
@@ -151,8 +154,9 @@ postClientesR = do
     nome <- runInputPost $ ireq textField "nome"
     tel  <- runInputPost $ ireq textField "telefone"
     cep  <- runInputPost $ ireq textField "cep"
+    comp <- runInputPost $ iopt textField "complemento"
     (rua, cidade) <- liftIO $ buscarEnderecoPorCep cep
-    _ <- runDB $insert$ Cliente nome tel cep rua cidade
+    _ <- runDB $ insert $ Cliente nome tel cep rua comp cidade
     redirect ClientesR
 
 getClienteEditarR :: ClienteId -> Handler Html
@@ -167,6 +171,7 @@ getClienteEditarR clid = do
                 Telefone: <input type=text name=telefone value=#{clienteTelefone cli} required>
                 CEP: <input type=text name=cep value=#{clienteCep cli} required>
                 Endereço: <input type=text name=endereco value=#{clienteEndereco cli} required>
+                Número/Complemento (opcional): <input type=text name=complemento value=#{fromMaybe "" (clienteComplemento cli)}>
                 Cidade: <input type=text name=cidade value=#{clienteCidade cli} required>
                 <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{ClientesR}>Cancelar
@@ -178,8 +183,9 @@ postClienteEditarR clid = do
     tel  <- runInputPost $ ireq textField "telefone"
     cep  <- runInputPost $ ireq textField "cep"
     end  <- runInputPost $ ireq textField "endereco"
+    comp <- runInputPost $ iopt textField "complemento"
     cid  <- runInputPost $ ireq textField "cidade"
-    runDB $ update clid [ClienteNome =. nome, ClienteTelefone =. tel, ClienteCep =. cep, ClienteEndereco =. end, ClienteCidade =. cid]
+    runDB $ update clid [ClienteNome =. nome, ClienteTelefone =. tel, ClienteCep =. cep, ClienteEndereco =. end, ClienteComplemento =. comp, ClienteCidade =. cid]
     redirect ClientesR
 
 postClienteExcluirR :: ClienteId -> Handler Html
@@ -194,6 +200,8 @@ getProdutosR :: Handler Html
 getProdutosR = do
     produtos <- runDB $ selectList [] [Asc ProdutoNome]
     categorias <- runDB $ selectList [] [Asc CategoriaNome]
+    let nomesCategorias = [(cid, categoriaNome cat) | Entity cid cat <- categorias]
+        nomeCategoria prod = fromMaybe "-" (lookup (produtoCategoriaId prod) nomesCategorias)
     defaultLayout $ do
         setTitle "Produtos - Lanchonete"
         [whamlet|
@@ -215,13 +223,13 @@ getProdutosR = do
                 <tr>
                     <th>Nome
                     <th>Preço
-                    <th>ID Categoria
+                    <th>Categoria
                     <th>Ações
                 $forall Entity pid prod <- produtos
                     <tr>
                         <td>#{produtoNome prod}
                         <td>R$ #{produtoPreco prod}
-                        <td>#{fromSqlKey (produtoCategoriaId prod)}
+                        <td>#{nomeCategoria prod}
                         <td>
                             <a .btn .btn-default .btn-xs href=@{ProdutoEditarR pid}>Editar
                             <form method=post action=@{ProdutoExcluirR pid} style="display:inline;">
@@ -511,7 +519,8 @@ postItemExcluirR iid = do
 getAvaliacoesR :: Handler Html
 getAvaliacoesR = do
     avaliacoes <- runDB $ selectList [] [Desc AvaliacaoId]
-    pedidos    <- runDB $ selectList [] [Desc PedidoId]
+    -- Só pedidos concluídos (entregues) podem ser avaliados
+    pedidos    <- runDB $ selectList [PedidoStatus ==. "Entregue"] [Desc PedidoId]
     defaultLayout $ do
         setTitle "Avaliações - Lanchonete"
         [whamlet|
@@ -519,14 +528,17 @@ getAvaliacoesR = do
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{PedidosR}>Pedidos</a>
 
             <h3>Registrar Avaliação
-            <form .form-crud method=post action=@{AvaliacoesR}>
-                Pedido:
-                <select name=pedidoId required>
-                    $forall Entity pid ped <- pedidos
-                        <option value=#{fromSqlKey pid}>Pedido ##{fromSqlKey pid} (#{pedidoStatus ped})
-                Nota (1 a 5): <input type=number name=nota value="5" min="1" max="5" required>
-                Comentário: <input type=text name=comentario required>
-                <button .btn .btn-primary type=submit>Enviar Avaliação
+            $if null pedidos
+                <p .text-muted>Nenhum pedido entregue para avaliar.
+            $else
+                <form .form-crud method=post action=@{AvaliacoesR}>
+                    Pedido:
+                    <select name=pedidoId required>
+                        $forall Entity pid ped <- pedidos
+                            <option value=#{fromSqlKey pid}>Pedido ##{fromSqlKey pid} (#{pedidoStatus ped})
+                    Nota (1 a 5): <input type=number name=nota value="5" min="1" max="5" required>
+                    Comentário: <input type=text name=comentario required>
+                    <button .btn .btn-primary type=submit>Enviar Avaliação
 
             <h3>Avaliações Recebidas
             <table .table .table-striped .table-bordered .table-hover>
@@ -551,7 +563,14 @@ postAvaliacoesR = do
     pedIdInt <- runInputPost $ ireq intField "pedidoId"
     nota     <- runInputPost $ ireq intField "nota"
     com      <- runInputPost $ ireq textField "comentario"
-    _ <- runDB $ insert $ Avaliacao (toSqlKey (fromIntegral pedIdInt)) nota com
+    let pid = toSqlKey (fromIntegral pedIdInt)
+    pedido   <- runDB $ get404 pid
+    -- A regra também é conferida no servidor, não só na lista do formulário
+    if pedidoStatus pedido == "Entregue"
+        then do
+            _ <- runDB $ insert $ Avaliacao pid nota com
+            setMessage "Avaliação registrada."
+        else setMessage "Só pedidos entregues podem ser avaliados."
     redirect AvaliacoesR
 
 getAvaliacaoEditarR :: AvaliacaoId -> Handler Html

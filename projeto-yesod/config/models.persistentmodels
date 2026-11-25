@@ -33,6 +33,7 @@ Cliente
     telefone Text
     cep Text
     endereco Text
+    complemento Text Maybe
     cidade Text
     deriving Show
 

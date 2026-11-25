@@ -21,10 +21,13 @@ module Application
     ) where
 
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
-import Database.Persist.Sqlite              (createSqlitePool, runSqlPool,
-                                             sqlDatabase, sqlPoolSize)
+import Database.Persist.Sqlite              (createSqlitePool, fkEnabled,
+                                             mkSqliteConnectionInfo, runSqlConn,
+                                             sqlDatabase, sqlPoolSize,
+                                             withSqliteConnInfo)
 import Import
 import Language.Haskell.TH.Syntax           (qLocation)
+import Lens.Micro                           (set)
 import Network.HTTP.Client.TLS              (getGlobalManager)
 import Network.Wai (Middleware)
 import Network.Wai.Handler.Warp             (Settings, defaultSettings,
@@ -77,13 +80,20 @@ makeFoundation appSettings = do
         tempFoundation = mkFoundation $ error "connPool forced in tempFoundation"
         logFunc = messageLoggerSource tempFoundation appLogger
 
+    -- Perform database migration using our application's logging settings.
+    -- Ao alterar uma tabela, o Persistent a recria no SQLite (DROP + CREATE).
+    -- Por isso a migração usa uma conexão própria, sem checagem de chaves
+    -- estrangeiras. As conexões do pool continuam com a checagem ligada.
+    let migrationInfo = set fkEnabled False $
+            mkSqliteConnectionInfo (sqlDatabase $ appDatabaseConf appSettings)
+    runLoggingT
+        (withSqliteConnInfo migrationInfo $ runSqlConn (runMigration migrateAll))
+        logFunc
+
     -- Create the database connection pool
     pool <- flip runLoggingT logFunc $ createSqlitePool
         (sqlDatabase $ appDatabaseConf appSettings)
         (sqlPoolSize $ appDatabaseConf appSettings)
-
-    -- Perform database migration using our application's logging settings.
-    runLoggingT (runSqlPool (runMigration migrateAll) pool) logFunc
 
     -- Return the foundation
     return $ mkFoundation pool
