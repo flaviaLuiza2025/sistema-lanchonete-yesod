@@ -28,6 +28,7 @@ import Database.Persist.Sqlite              (createSqlitePool, fkEnabled,
 import Import
 import Language.Haskell.TH.Syntax           (qLocation)
 import Lens.Micro                           (set)
+import Migracao                             (migrarBanco)
 import Network.HTTP.Client.TLS              (getGlobalManager)
 import Network.Wai (Middleware)
 import Network.Wai.Handler.Warp             (Settings, defaultSettings,
@@ -87,7 +88,7 @@ makeFoundation appSettings = do
     let migrationInfo = set fkEnabled False $
             mkSqliteConnectionInfo (sqlDatabase $ appDatabaseConf appSettings)
     runLoggingT
-        (withSqliteConnInfo migrationInfo $ runSqlConn (runMigration migrateAll))
+        (withSqliteConnInfo migrationInfo $ runSqlConn migrarBanco)
         logFunc
 
     -- Create the database connection pool

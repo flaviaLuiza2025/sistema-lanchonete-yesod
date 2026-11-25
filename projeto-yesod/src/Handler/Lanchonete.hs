@@ -9,6 +9,7 @@ import Database.Persist.Sql (fromSqlKey, toSqlKey)
 import GHC.Generics (Generic)
 import Data.Aeson (FromJSON)
 import Network.HTTP.Simple (httpJSON, getResponseBody, parseRequest)
+import Text.Printf (printf)
 
 -- ==========================================
 -- 1. INTEGRAÇÃO COM API EXTERNA (ViaCEP)
@@ -38,6 +39,42 @@ buscarEnderecoPorCep cepDigitado = do
                             , fromMaybe "Cidade não informada" (localidade dados)
                             )
         Left _ -> return ("Erro ao consultar API", "Sem cidade")
+
+-- ==========================================
+-- FUNÇÕES AUXILIARES
+-- ==========================================
+statusEntregue :: Text
+statusEntregue = "Entregue"
+
+statusPedidos :: [Text]
+statusPedidos = ["Em Preparo", "Saiu para Entrega", statusEntregue]
+
+-- Ex.: 25.5 -> "R$ 25,50"
+formatarReais :: Double -> Text
+formatarReais valor = "R$ " ++ pack (map virgula (printf "%.2f" valor))
+  where
+    virgula '.' = ','
+    virgula c   = c
+
+-- Usa o preço guardado no item, e não o preço atual do produto
+subtotalItem :: ItemPedido -> Double
+subtotalItem item = fromIntegral (itemPedidoQuantidade item) * itemPedidoPrecoUnitario item
+
+-- Soma os subtotais dos itens que pertencem ao pedido
+totalPedido :: [Entity ItemPedido] -> PedidoId -> Double
+totalPedido itens pid =
+    sum [subtotalItem item | Entity _ item <- itens, itemPedidoPedidoId item == pid]
+
+-- Só exclui se nenhum outro registro depender deste; senão, mostra o aviso.
+-- A contagem e a exclusão ocorrem na mesma transação.
+excluirSemVinculos :: SqlPersistT Handler Int -> SqlPersistT Handler () -> Html -> Handler ()
+excluirSemVinculos contarVinculos excluir aviso = do
+    excluiu <- runDB $ do
+        vinculos <- contarVinculos
+        if vinculos > 0
+            then return False
+            else excluir >> return True
+    setMessage $ if excluiu then "Registro excluído." else aviso
 
 -- ==========================================
 -- 2. CRUD DE CATEGORIAS
@@ -102,7 +139,8 @@ postCategoriaEditarR cid = do
 
 postCategoriaExcluirR :: CategoriaId -> Handler Html
 postCategoriaExcluirR cid = do
-    runDB $ delete cid
+    excluirSemVinculos (count [ProdutoCategoriaId ==. cid]) (delete cid)
+        "Não é possível excluir: há produtos nesta categoria."
     redirect CategoriasR
 
 -- ==========================================
@@ -190,7 +228,8 @@ postClienteEditarR clid = do
 
 postClienteExcluirR :: ClienteId -> Handler Html
 postClienteExcluirR clid = do
-    runDB $ delete clid
+    excluirSemVinculos (count [PedidoClienteId ==. clid]) (delete clid)
+        "Não é possível excluir: este cliente tem pedidos."
     redirect ClientesR
 
 -- ==========================================
@@ -228,7 +267,7 @@ getProdutosR = do
                 $forall Entity pid prod <- produtos
                     <tr>
                         <td>#{produtoNome prod}
-                        <td>R$ #{produtoPreco prod}
+                        <td>#{formatarReais (produtoPreco prod)}
                         <td>#{nomeCategoria prod}
                         <td>
                             <a .btn .btn-default .btn-xs href=@{ProdutoEditarR pid}>Editar
@@ -267,7 +306,8 @@ postProdutoEditarR pid = do
 
 postProdutoExcluirR :: ProdutoId -> Handler Html
 postProdutoExcluirR pid = do
-    runDB $ delete pid
+    excluirSemVinculos (count [ItemPedidoProdutoId ==. pid]) (delete pid)
+        "Não é possível excluir: este produto está em pedidos."
     redirect ProdutosR
 
     -- ==========================================
@@ -334,7 +374,8 @@ postEntregadorEditarR eid = do
 
 postEntregadorExcluirR :: EntregadorId -> Handler Html
 postEntregadorExcluirR eid = do
-    runDB $ delete eid
+    excluirSemVinculos (count [PedidoEntregadorId ==. Just eid]) (delete eid)
+        "Não é possível excluir: este entregador tem pedidos."
     redirect EntregadoresR
 
 -- ==========================================
@@ -345,6 +386,7 @@ getPedidosR = do
     pedidos      <- runDB $ selectList [] [Desc PedidoId]
     clientes     <- runDB $ selectList [] [Asc ClienteNome]
     entregadores <- runDB $ selectList [] [Asc EntregadorNome]
+    itens        <- runDB $ selectList [] []
     defaultLayout $ do
         setTitle "Pedidos - Lanchonete"
         [whamlet|
@@ -364,9 +406,8 @@ getPedidosR = do
                         <option value=#{fromSqlKey eid}>#{entregadorNome ent}
                 Status:
                 <select name=status required>
-                    <option value="Em Preparo">Em Preparo
-                    <option value="Saiu para Entrega">Saiu para Entrega
-                    <option value="Entregue">Entregue
+                    $forall st <- statusPedidos
+                        <option value=#{st}>#{st}
                 Observação: <input type=text name=observacao>
                 <button .btn .btn-primary type=submit>Abrir Pedido
 
@@ -377,6 +418,7 @@ getPedidosR = do
                     <th>ID Cliente
                     <th>ID Entregador
                     <th>Status
+                    <th>Total
                     <th>Observação
                     <th>Ações
                 $forall Entity pid ped <- pedidos
@@ -389,10 +431,11 @@ getPedidosR = do
                             $nothing
                                 Sem entregador
                         <td>#{pedidoStatus ped}
+                        <td>#{formatarReais (totalPedido itens pid)}
                         <td>#{fromMaybe "-" (pedidoObservacao ped)}
                         <td>
                             <a .btn .btn-default .btn-xs href=@{PedidoEditarR pid}>Editar Status
-                            <form method=post action=@{PedidoExcluirR pid} style="display:inline;">
+                            <form method=post action=@{PedidoExcluirR pid} style="display:inline;" onsubmit="return confirm('Excluir o pedido, seus itens e sua avaliação?');">
                                 <button .btn .btn-danger .btn-xs type=submit>Excluir
         |]
 
@@ -416,9 +459,8 @@ getPedidoEditarR pid = do
             <form .form-crud method=post action=@{PedidoEditarR pid}>
                 Status:
                 <select name=status required>
-                    <option value="Em Preparo">Em Preparo
-                    <option value="Saiu para Entrega">Saiu para Entrega
-                    <option value="Entregue">Entregue
+                    $forall st <- statusPedidos
+                        <option value=#{st} :st == pedidoStatus ped:selected>#{st}
                 Observação: <input type=text name=observacao value=#{fromMaybe "" (pedidoObservacao ped)}>
                 <button .btn .btn-primary type=submit>Salvar
             <p><a href=@{PedidosR}>Cancelar
@@ -433,7 +475,12 @@ postPedidoEditarR pid = do
 
 postPedidoExcluirR :: PedidoId -> Handler Html
 postPedidoExcluirR pid = do
-    runDB $ delete pid
+    -- Itens e avaliação só existem dentro do pedido: saem junto, na mesma transação
+    runDB $ do
+        deleteWhere [ItemPedidoPedidoId ==. pid]
+        deleteWhere [AvaliacaoPedidoId ==. pid]
+        delete pid
+    setMessage "Pedido excluído."
     redirect PedidosR
 
 -- ==========================================
@@ -459,7 +506,7 @@ getItensR = do
                 Produto:
                 <select name=produtoId required>
                     $forall Entity prid prod <- produtos
-                        <option value=#{fromSqlKey prid}>#{produtoNome prod} - R$ #{produtoPreco prod}
+                        <option value=#{fromSqlKey prid}>#{produtoNome prod} - #{formatarReais (produtoPreco prod)}
                 Quantidade: <input type=number name=quantidade value="1" min="1" required>
                 <button .btn .btn-primary type=submit>Adicionar Item
 
@@ -469,12 +516,16 @@ getItensR = do
                     <th>ID Pedido
                     <th>ID Produto
                     <th>Quantidade
+                    <th>Preço Unitário
+                    <th>Subtotal
                     <th>Ações
                 $forall Entity iid item <- itens
                     <tr>
                         <td>##{fromSqlKey (itemPedidoPedidoId item)}
                         <td>#{fromSqlKey (itemPedidoProdutoId item)}
                         <td>#{itemPedidoQuantidade item}
+                        <td>#{formatarReais (itemPedidoPrecoUnitario item)}
+                        <td>#{formatarReais (subtotalItem item)}
                         <td>
                             <a .btn .btn-default .btn-xs href=@{ItemEditarR iid}>Editar Qtd
                             <form method=post action=@{ItemExcluirR iid} style="display:inline;">
@@ -486,7 +537,11 @@ postItensR = do
     pedIdInt  <- runInputPost $ ireq intField "pedidoId"
     prodIdInt <- runInputPost $ ireq intField "produtoId"
     qtd       <- runInputPost $ ireq intField "quantidade"
-    _ <- runDB $ insert $ ItemPedido (toSqlKey (fromIntegral pedIdInt)) (toSqlKey (fromIntegral prodIdInt)) qtd
+    let prid = toSqlKey (fromIntegral prodIdInt)
+    runDB $ do
+        produto <- get404 prid
+        -- Guarda o preço do momento: reajustes futuros não mudam este pedido
+        insert_ $ ItemPedido (toSqlKey (fromIntegral pedIdInt)) prid qtd (produtoPreco produto)
     redirect ItensR
 
 getItemEditarR :: ItemPedidoId -> Handler Html
@@ -519,8 +574,10 @@ postItemExcluirR iid = do
 getAvaliacoesR :: Handler Html
 getAvaliacoesR = do
     avaliacoes <- runDB $ selectList [] [Desc AvaliacaoId]
-    -- Só pedidos concluídos (entregues) podem ser avaliados
-    pedidos    <- runDB $ selectList [PedidoStatus ==. "Entregue"] [Desc PedidoId]
+    entregues  <- runDB $ selectList [PedidoStatus ==. statusEntregue] [Desc PedidoId]
+    -- Só pedidos concluídos (entregues) e ainda sem avaliação podem ser avaliados
+    let avaliados = [avaliacaoPedidoId av | Entity _ av <- avaliacoes]
+        pedidos   = [ped | ped <- entregues, entityKey ped `notElem` avaliados]
     defaultLayout $ do
         setTitle "Avaliações - Lanchonete"
         [whamlet|
@@ -529,7 +586,7 @@ getAvaliacoesR = do
 
             <h3>Registrar Avaliação
             $if null pedidos
-                <p .text-muted>Nenhum pedido entregue para avaliar.
+                <p .text-muted>Nenhum pedido entregue aguardando avaliação.
             $else
                 <form .form-crud method=post action=@{AvaliacoesR}>
                     Pedido:
@@ -566,10 +623,13 @@ postAvaliacoesR = do
     let pid = toSqlKey (fromIntegral pedIdInt)
     pedido   <- runDB $ get404 pid
     -- A regra também é conferida no servidor, não só na lista do formulário
-    if pedidoStatus pedido == "Entregue"
+    if pedidoStatus pedido == statusEntregue
         then do
-            _ <- runDB $ insert $ Avaliacao pid nota com
-            setMessage "Avaliação registrada."
+            -- insertUnique devolve Nothing se o pedido já tiver avaliação (UniqueAvaliacaoPedido)
+            resultado <- runDB $ insertUnique $ Avaliacao pid nota com
+            case resultado of
+                Just _  -> setMessage "Avaliação registrada."
+                Nothing -> setMessage "Este pedido já foi avaliado."
         else setMessage "Só pedidos entregues podem ser avaliados."
     redirect AvaliacoesR
 

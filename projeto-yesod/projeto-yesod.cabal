@@ -29,6 +29,7 @@ library
       Handler.Profile
       Import
       Import.NoFoundation
+      Migracao
       Model
       Settings
       Settings.StaticFiles

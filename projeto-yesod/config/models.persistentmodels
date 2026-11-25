@@ -53,10 +53,12 @@ ItemPedido
     pedidoId PedidoId
     produtoId ProdutoId
     quantidade Int
+    precoUnitario Double default=0
     deriving Show
 
 Avaliacao
     pedidoId PedidoId
     nota Int
     comentario Text
+    UniqueAvaliacaoPedido pedidoId
     deriving Show
