@@ -1,0 +1,6 @@
+.stack-work/
+build.log
+*.sqlite3-shm
+*.sqlite3-wal
+teste.sqlite3
+static/tmp/

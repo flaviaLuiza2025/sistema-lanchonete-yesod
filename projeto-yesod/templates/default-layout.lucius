@@ -72,10 +72,29 @@
     margin-bottom: 40px;
 }
 
+/* Cores e fontes gerais */
+body {
+    background-color: #faf8f5;
+    font-size: 16px;
+    color: #2c2c2c;
+}
+
+h1 {
+    color: #bf360c;
+    font-weight: bold;
+}
+
+h3 {
+    color: #4e342e;
+    margin-top: 24px;
+}
+
 /* Tabelas dos CRUDs */
 .table {
     margin-top: 15px;
     margin-bottom: 40px;
+    background-color: #ffffff;
+    font-size: 16px;
 }
 
 .table > tbody > tr > th {
@@ -96,21 +115,31 @@
 
 /* Formulários dos CRUDs */
 .form-crud {
-    padding: 15px;
+    background-color: #fff3e0;
+    border: 1px solid #ffcc80;
+    border-left: 6px solid #e65100;
+    border-radius: 8px;
+    padding: 20px;
     margin-bottom: 25px;
-    background-color: #f7f7f7;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    font-size: 17px;
+    line-height: 2.2;
 }
 
-.form-crud input,
+.form-crud input[type="text"],
+.form-crud input[type="number"],
 .form-crud select {
-    height: 36px;
+    font-size: 16px;
     padding: 6px 10px;
-    margin: 4px 12px 4px 4px;
-    border: 1px solid #ccc;
+    border: 1px solid #bdbdbd;
     border-radius: 4px;
-    background-color: white;
+    background-color: #ffffff;
+    margin-right: 12px;
+}
+
+.form-crud button {
+    font-size: 16px;
+    padding: 8px 16px;
+    font-weight: bold;
 }
 
 /* Cartões do painel inicial */

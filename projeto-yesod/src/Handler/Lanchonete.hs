@@ -10,6 +10,7 @@ import GHC.Generics (Generic)
 import Data.Aeson (FromJSON)
 import Network.HTTP.Simple (httpJSON, getResponseBody, parseRequest)
 import Text.Printf (printf)
+import Data.Char (isDigit)
 
 -- ==========================================
 -- 1. INTEGRAÇÃO COM API EXTERNA (ViaCEP)
@@ -208,6 +209,7 @@ getClienteEditarR clid = do
                 Nome: <input type=text name=nome value=#{clienteNome cli} required>
                 Telefone: <input type=text name=telefone value=#{clienteTelefone cli} required>
                 CEP: <input type=text name=cep value=#{clienteCep cli} required>
+                <p .text-muted>Ao alterar o CEP, endereço e cidade são buscados novamente na ViaCEP.
                 Endereço: <input type=text name=endereco value=#{clienteEndereco cli} required>
                 Número/Complemento (opcional): <input type=text name=complemento value=#{fromMaybe "" (clienteComplemento cli)}>
                 Cidade: <input type=text name=cidade value=#{clienteCidade cli} required>
@@ -223,8 +225,19 @@ postClienteEditarR clid = do
     end  <- runInputPost $ ireq textField "endereco"
     comp <- runInputPost $ iopt textField "complemento"
     cid  <- runInputPost $ ireq textField "cidade"
-    runDB $ update clid [ClienteNome =. nome, ClienteTelefone =. tel, ClienteCep =. cep, ClienteEndereco =. end, ClienteComplemento =. comp, ClienteCidade =. cid]
+    cliente <- runDB $ get404 clid
+    -- CEP alterado: busca o endereço novo na ViaCEP.
+    -- CEP igual: mantém o endereço digitado (permite corrigir à mão).
+    (end', cid') <-
+        if somenteDigitos cep /= somenteDigitos (clienteCep cliente)
+            then do
+                setMessage "CEP alterado: endereço e cidade atualizados pela ViaCEP."
+                liftIO $ buscarEnderecoPorCep cep
+            else return (end, cid)
+    runDB $ update clid [ClienteNome =. nome, ClienteTelefone =. tel, ClienteCep =. cep, ClienteEndereco =. end', ClienteComplemento =. comp, ClienteCidade =. cid']
     redirect ClientesR
+  where
+    somenteDigitos = filter isDigit
 
 postClienteExcluirR :: ClienteId -> Handler Html
 postClienteExcluirR clid = do
@@ -387,6 +400,13 @@ getPedidosR = do
     clientes     <- runDB $ selectList [] [Asc ClienteNome]
     entregadores <- runDB $ selectList [] [Asc EntregadorNome]
     itens        <- runDB $ selectList [] []
+    -- Troca os IDs gravados no pedido pelos nomes, para exibir na tabela
+    let nomesClientes     = [(clid, clienteNome cli) | Entity clid cli <- clientes]
+        nomesEntregadores = [(eid, entregadorNome ent) | Entity eid ent <- entregadores]
+        nomeCliente ped   = fromMaybe "-" (lookup (pedidoClienteId ped) nomesClientes)
+        nomeEntregador ped = case pedidoEntregadorId ped of
+            Just eid -> fromMaybe "-" (lookup eid nomesEntregadores)
+            Nothing  -> "Sem entregador"
     defaultLayout $ do
         setTitle "Pedidos - Lanchonete"
         [whamlet|
@@ -415,8 +435,8 @@ getPedidosR = do
             <table .table .table-striped .table-bordered .table-hover>
                 <tr>
                     <th>ID Pedido
-                    <th>ID Cliente
-                    <th>ID Entregador
+                    <th>Cliente
+                    <th>Entregador
                     <th>Status
                     <th>Total
                     <th>Observação
@@ -424,16 +444,13 @@ getPedidosR = do
                 $forall Entity pid ped <- pedidos
                     <tr>
                         <td>##{fromSqlKey pid}
-                        <td>#{fromSqlKey (pedidoClienteId ped)}
-                        <td>
-                            $maybe eid <- pedidoEntregadorId ped
-                                #{fromSqlKey eid}
-                            $nothing
-                                Sem entregador
+                        <td>#{nomeCliente ped}
+                        <td>#{nomeEntregador ped}
                         <td>#{pedidoStatus ped}
                         <td>#{formatarReais (totalPedido itens pid)}
                         <td>#{fromMaybe "-" (pedidoObservacao ped)}
                         <td>
+                            <a .btn .btn-info .btn-xs href=@?{itensDoPedido pid}>Itens
                             <a .btn .btn-default .btn-xs href=@{PedidoEditarR pid}>Editar Status
                             <form method=post action=@{PedidoExcluirR pid} style="display:inline;" onsubmit="return confirm('Excluir o pedido, seus itens e sua avaliação?');">
                                 <button .btn .btn-danger .btn-xs type=submit>Excluir
@@ -486,50 +503,78 @@ postPedidoExcluirR pid = do
 -- ==========================================
 -- 7. CRUD DE ITENS DO PEDIDO
 -- ==========================================
+-- Endereço da tela de itens já filtrada por um pedido: /itens?pedido=N
+itensDoPedido :: PedidoId -> (Route App, [(Text, Text)])
+itensDoPedido pid = (ItensR, [("pedido", tshow (fromSqlKey pid))])
+
 getItensR :: Handler Html
 getItensR = do
-    itens    <- runDB $ selectList [] [Desc ItemPedidoId]
     pedidos  <- runDB $ selectList [] [Desc PedidoId]
     produtos <- runDB $ selectList [] [Asc ProdutoNome]
+    -- Pedido escolhido na URL (?pedido=N); sem escolha válida, usa o mais recente
+    param <- lookupGetParam "pedido"
+    let escolhido = do
+            texto <- param
+            numero <- readMay (unpack texto) :: Maybe Int64
+            find (\ped -> entityKey ped == toSqlKey numero) pedidos
+        selecionado = escolhido <|> headMay pedidos
+    itens <- case selecionado of
+        Just (Entity pid _) -> runDB $ selectList [ItemPedidoPedidoId ==. pid] [Asc ItemPedidoId]
+        Nothing             -> return []
+    let nomesProdutos = [(prid, produtoNome prod) | Entity prid prod <- produtos]
+        nomeProduto item = fromMaybe "-" (lookup (itemPedidoProdutoId item) nomesProdutos)
+        total = sum [subtotalItem item | Entity _ item <- itens]
     defaultLayout $ do
         setTitle "Itens do Pedido - Lanchonete"
         [whamlet|
             <h1>Itens dos Pedidos
             <p><a href=@{HomeR}>Voltar ao Início</a> | <a href=@{PedidosR}>Pedidos</a> | <a href=@{ProdutosR}>Produtos</a>
 
-            <h3>Adicionar Item a um Pedido
-            <form .form-crud method=post action=@{ItensR}>
-                Pedido:
-                <select name=pedidoId required>
-                    $forall Entity pid ped <- pedidos
-                        <option value=#{fromSqlKey pid}>Pedido ##{fromSqlKey pid} (#{pedidoStatus ped})
-                Produto:
-                <select name=produtoId required>
-                    $forall Entity prid prod <- produtos
-                        <option value=#{fromSqlKey prid}>#{produtoNome prod} - #{formatarReais (produtoPreco prod)}
-                Quantidade: <input type=number name=quantidade value="1" min="1" required>
-                <button .btn .btn-primary type=submit>Adicionar Item
+            $maybe Entity selPid _ <- selecionado
+                <form .form-crud method=get action=@{ItensR}>
+                    Pedido:
+                    <select name=pedido onchange="this.form.submit()">
+                        $forall Entity pid ped <- pedidos
+                            <option value=#{fromSqlKey pid} :pid == selPid:selected>Pedido ##{fromSqlKey pid} (#{pedidoStatus ped})
+                    <button .btn .btn-default type=submit>Ver itens
 
-            <h3>Itens Lançados
-            <table .table .table-striped .table-bordered .table-hover>
-                <tr>
-                    <th>ID Pedido
-                    <th>ID Produto
-                    <th>Quantidade
-                    <th>Preço Unitário
-                    <th>Subtotal
-                    <th>Ações
-                $forall Entity iid item <- itens
-                    <tr>
-                        <td>##{fromSqlKey (itemPedidoPedidoId item)}
-                        <td>#{fromSqlKey (itemPedidoProdutoId item)}
-                        <td>#{itemPedidoQuantidade item}
-                        <td>#{formatarReais (itemPedidoPrecoUnitario item)}
-                        <td>#{formatarReais (subtotalItem item)}
-                        <td>
-                            <a .btn .btn-default .btn-xs href=@{ItemEditarR iid}>Editar Qtd
-                            <form method=post action=@{ItemExcluirR iid} style="display:inline;">
-                                <button .btn .btn-danger .btn-xs type=submit>Excluir
+                <h3>Adicionar Item ao Pedido ##{fromSqlKey selPid}
+                <form .form-crud method=post action=@{ItensR}>
+                    <input type=hidden name=pedidoId value=#{fromSqlKey selPid}>
+                    Produto:
+                    <select name=produtoId required>
+                        $forall Entity prid prod <- produtos
+                            <option value=#{fromSqlKey prid}>#{produtoNome prod} - #{formatarReais (produtoPreco prod)}
+                    Quantidade: <input type=number name=quantidade value="1" min="1" required>
+                    <button .btn .btn-primary type=submit>Adicionar Item
+
+                <h3>Itens do Pedido ##{fromSqlKey selPid}
+                $if null itens
+                    <p .text-muted>Este pedido ainda não tem itens.
+                $else
+                    <table .table .table-striped .table-bordered .table-hover>
+                        <tr>
+                            <th>Produto
+                            <th>Quantidade
+                            <th>Preço Unitário
+                            <th>Subtotal
+                            <th>Ações
+                        $forall Entity iid item <- itens
+                            <tr>
+                                <td>#{nomeProduto item}
+                                <td>#{itemPedidoQuantidade item}
+                                <td>#{formatarReais (itemPedidoPrecoUnitario item)}
+                                <td>#{formatarReais (subtotalItem item)}
+                                <td>
+                                    <a .btn .btn-default .btn-xs href=@{ItemEditarR iid}>Editar Qtd
+                                    <form method=post action=@{ItemExcluirR iid} style="display:inline;">
+                                        <button .btn .btn-danger .btn-xs type=submit>Excluir
+                        <tr>
+                            <td colspan=3><strong>Total do pedido</strong>
+                            <td><strong>#{formatarReais total}</strong>
+                            <td>
+            $nothing
+                <p .text-muted>Nenhum pedido cadastrado. <a href=@{PedidosR}>Abra um pedido</a> antes de lançar itens.
         |]
 
 postItensR :: Handler Html
@@ -537,12 +582,14 @@ postItensR = do
     pedIdInt  <- runInputPost $ ireq intField "pedidoId"
     prodIdInt <- runInputPost $ ireq intField "produtoId"
     qtd       <- runInputPost $ ireq intField "quantidade"
-    let prid = toSqlKey (fromIntegral prodIdInt)
+    let pid  = toSqlKey (fromIntegral pedIdInt)
+        prid = toSqlKey (fromIntegral prodIdInt)
     runDB $ do
+        _ <- get404 pid
         produto <- get404 prid
         -- Guarda o preço do momento: reajustes futuros não mudam este pedido
-        insert_ $ ItemPedido (toSqlKey (fromIntegral pedIdInt)) prid qtd (produtoPreco produto)
-    redirect ItensR
+        insert_ $ ItemPedido pid prid qtd (produtoPreco produto)
+    redirect (itensDoPedido pid)
 
 getItemEditarR :: ItemPedidoId -> Handler Html
 getItemEditarR iid = do
@@ -554,19 +601,21 @@ getItemEditarR iid = do
             <form .form-crud method=post action=@{ItemEditarR iid}>
                 Quantidade: <input type=number name=quantidade value=#{itemPedidoQuantidade item} min="1" required>
                 <button .btn .btn-primary type=submit>Salvar
-            <p><a href=@{ItensR}>Cancelar
+            <p><a href=@?{itensDoPedido (itemPedidoPedidoId item)}>Cancelar
         |]
 
 postItemEditarR :: ItemPedidoId -> Handler Html
 postItemEditarR iid = do
-    qtd <- runInputPost $ ireq intField "quantidade"
+    qtd  <- runInputPost $ ireq intField "quantidade"
+    item <- runDB $ get404 iid
     runDB $ update iid [ItemPedidoQuantidade =. qtd]
-    redirect ItensR
+    redirect (itensDoPedido (itemPedidoPedidoId item))
 
 postItemExcluirR :: ItemPedidoId -> Handler Html
 postItemExcluirR iid = do
+    item <- runDB $ get404 iid
     runDB $ delete iid
-    redirect ItensR
+    redirect (itensDoPedido (itemPedidoPedidoId item))
 
 -- ==========================================
 -- 8. CRUD DE AVALIAÇÕES
